@@ -1,0 +1,393 @@
+<style>
+  * {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+  }
+  body {
+    font-family: var(--font-sans);
+  }
+  #app {
+    padding: 1rem 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+  }
+  #top-bar {
+    display: flex;
+    gap: 16px;
+    align-items: center;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+  .stat {
+    background: var(--color-background-secondary);
+    border-radius: var(--border-radius-md);
+    padding: 6px 16px;
+    text-align: center;
+    min-width: 80px;
+  }
+  .stat-label {
+    font-size: 12px;
+    color: var(--color-text-secondary);
+  }
+  .stat-val {
+    font-size: 20px;
+    font-weight: 500;
+    color: var(--color-text-primary);
+  }
+  #controls {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    justify-content: center;
+    align-items: center;
+  }
+  select,
+  button {
+    font-size: 13px;
+  }
+  #canvas-wrap {
+    position: relative;
+  }
+  canvas {
+    display: block;
+    border-radius: var(--border-radius-md);
+    border: 0.5px solid var(--color-border-secondary);
+  }
+  #overlay {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    background: rgba(0, 0, 0, 0.55);
+    border-radius: var(--border-radius-md);
+    gap: 12px;
+  }
+  #overlay h2 {
+    font-size: 22px;
+    font-weight: 500;
+    color: #fff;
+  }
+  #overlay p {
+    font-size: 14px;
+    color: rgba(255, 255, 255, 0.75);
+    text-align: center;
+    padding: 0 16px;
+  }
+  #overlay button {
+    font-size: 14px;
+    padding: 8px 24px;
+  }
+  #msg {
+    font-size: 18px;
+    font-weight: 500;
+    color: #fff;
+  }
+</style>
+<div id="app">
+  <div id="top-bar">
+    <div class="stat">
+      <div class="stat-label">Score</div>
+      <div class="stat-val" id="score">0</div>
+    </div>
+    <div class="stat">
+      <div class="stat-label">High Score</div>
+      <div class="stat-val" id="hi">0</div>
+    </div>
+    <div class="stat">
+      <div class="stat-label">Level</div>
+      <div class="stat-val" id="lvl">1</div>
+    </div>
+  </div>
+  <div id="controls">
+    <label style="font-size: 13px; color: var(--color-text-secondary)"
+      >Speed</label
+    >
+    <select id="speed">
+      <option value="200">Slow</option>
+      <option value="130" selected>Normal</option>
+      <option value="80">Fast</option>
+      <option value="45">Insane</option>
+    </select>
+    <label style="font-size: 13px; color: var(--color-text-secondary)"
+      >Map</label
+    >
+    <select id="map">
+      <option value="0">Open Field</option>
+      <option value="1">Box Arena</option>
+      <option value="2">Maze Lite</option>
+      <option value="3">Four Rooms</option>
+    </select>
+    <button id="startBtn">New Game</button>
+  </div>
+  <div id="canvas-wrap">
+    <canvas id="c" width="420" height="420"></canvas>
+    <div id="overlay">
+      <h2>Snake</h2>
+      <p>
+        Use arrow keys or WASD to move.<br />Pick speed &amp; map, then start!
+      </p>
+      <button id="oBtn">Start Game</button>
+    </div>
+  </div>
+</div>
+<script>
+  const CELL = 21,
+    COLS = 20,
+    ROWS = 20;
+  const cv = document.getElementById('c');
+  const ctx = cv.getContext('2d');
+  const overlay = document.getElementById('overlay');
+  const oBtn = document.getElementById('oBtn');
+  const startBtn = document.getElementById('startBtn');
+  const scoreEl = document.getElementById('score');
+  const hiEl = document.getElementById('hi');
+  const lvlEl = document.getElementById('lvl');
+  const speedSel = document.getElementById('speed');
+  const mapSel = document.getElementById('map');
+
+  let snake,
+    dir,
+    nextDir,
+    food,
+    walls,
+    score,
+    highScore = 0,
+    gameLoop,
+    running = false,
+    dead = false;
+
+  const MAPS = [
+    () => [],
+    () => {
+      let w = [];
+      for (let i = 0; i < 20; i++) {
+        w.push([i, 0], [i, 19], [0, i], [19, i]);
+      }
+      return w;
+    },
+    () => {
+      let w = [];
+      [
+        [3, 3],
+        [3, 4],
+        [3, 5],
+        [3, 6],
+        [3, 7],
+        [3, 8],
+        [16, 3],
+        [16, 4],
+        [16, 5],
+        [16, 6],
+        [16, 7],
+        [16, 8],
+        [3, 11],
+        [3, 12],
+        [3, 13],
+        [3, 14],
+        [3, 15],
+        [3, 16],
+        [16, 11],
+        [16, 12],
+        [16, 13],
+        [16, 14],
+        [16, 15],
+        [16, 16],
+        [6, 3],
+        [7, 3],
+        [8, 3],
+        [9, 3],
+        [10, 3],
+        [11, 3],
+        [12, 3],
+        [13, 3],
+        [6, 16],
+        [7, 16],
+        [8, 16],
+        [9, 16],
+        [10, 16],
+        [11, 16],
+        [12, 16],
+        [13, 16],
+        [0, 9],
+        [0, 10],
+        [19, 9],
+        [19, 10],
+        [9, 0],
+        [10, 0],
+        [9, 19],
+        [10, 19],
+      ].forEach((p) => w.push(p));
+      return w;
+    },
+    () => {
+      let w = [];
+      for (let i = 0; i < 20; i++) {
+        w.push([9, i]);
+      }
+      for (let i = 0; i < 20; i++) {
+        w.push([i, 9]);
+      }
+      [
+        [9, 4],
+        [9, 14],
+        [4, 9],
+        [14, 9],
+      ].forEach((p) => {
+        w = w.filter((v) => !(v[0] === p[0] && v[1] === p[1]));
+      });
+      return w;
+    },
+  ];
+
+  function wallSet(ws) {
+    return new Set(ws.map(([x, y]) => x + ',' + y));
+  }
+
+  function placeFood(ws) {
+    let wset = wallSet(ws),
+      sset = new Set(snake.map(([x, y]) => x + ',' + y));
+    let candidates = [];
+    for (let x = 0; x < COLS; x++)
+      for (let y = 0; y < ROWS; y++)
+        if (!wset.has(x + ',' + y) && !sset.has(x + ',' + y))
+          candidates.push([x, y]);
+    return candidates[Math.floor(Math.random() * candidates.length)];
+  }
+
+  function initGame() {
+    walls = MAPS[+mapSel.value]();
+    let wset = wallSet(walls);
+    snake = [
+      [10, 10],
+      [9, 10],
+      [8, 10],
+    ];
+    dir = [1, 0];
+    nextDir = [1, 0];
+    score = 0;
+    scoreEl.textContent = 0;
+    lvlEl.textContent = 1;
+    food = placeFood(walls);
+    dead = false;
+    draw();
+  }
+
+  function step() {
+    dir = nextDir.slice();
+    let [hx, hy] = snake[0];
+    let nx = (hx + dir[0] + COLS) % COLS,
+      ny = (hy + dir[1] + ROWS) % ROWS;
+    let wset = wallSet(walls);
+    let hit =
+      snake.some(([x, y]) => x === nx && y === ny) || wset.has(nx + ',' + ny);
+    if (hit) {
+      endGame();
+      return;
+    }
+    snake.unshift([nx, ny]);
+    if (nx === food[0] && ny === food[1]) {
+      score++;
+      scoreEl.textContent = score;
+      if (score > highScore) {
+        highScore = score;
+        hiEl.textContent = highScore;
+      }
+      lvlEl.textContent = Math.floor(score / 5) + 1;
+      food = placeFood(walls);
+    } else {
+      snake.pop();
+    }
+    draw();
+  }
+
+  function draw() {
+    const isDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+    ctx.fillStyle = isDark ? '#1a1a1a' : '#f8f8f6';
+    ctx.fillRect(0, 0, cv.width, cv.height);
+    walls.forEach(([x, y]) => {
+      ctx.fillStyle = isDark ? '#444' : '#888';
+      ctx.fillRect(x * CELL, y * CELL, CELL, CELL);
+    });
+    if (food) {
+      ctx.fillStyle = '#D85A30';
+      ctx.beginPath();
+      ctx.arc(
+        food[0] * CELL + CELL / 2,
+        food[1] * CELL + CELL / 2,
+        CELL / 2 - 2,
+        0,
+        Math.PI * 2,
+      );
+      ctx.fill();
+    }
+    snake.forEach(([x, y], i) => {
+      ctx.fillStyle =
+        i === 0
+          ? isDark
+            ? '#5DCAA5'
+            : '#1D9E75'
+          : isDark
+            ? '#9FE1CB'
+            : '#3db88a';
+      ctx.fillRect(x * CELL + 1, y * CELL + 1, CELL - 2, CELL - 2);
+      if (i === 0) {
+        ctx.fillStyle = isDark ? '#1a1a1a' : '#fff';
+        let ex = dir[0],
+          ey = dir[1];
+        let cx = x * CELL + CELL / 2,
+          cy = y * CELL + CELL / 2;
+        let px = -ey * 4,
+          py = ex * 4;
+        ctx.beginPath();
+        ctx.arc(cx + ex * 3 + px, cy + ey * 3 + py, 2, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.beginPath();
+        ctx.arc(cx + ex * 3 - px, cy + ey * 3 - py, 2, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    });
+  }
+
+  function endGame() {
+    dead = true;
+    running = false;
+    clearInterval(gameLoop);
+    overlay.innerHTML = `<h2 style="color:#fff">Game Over</h2><p style="color:rgba(255,255,255,0.8)">Score: ${score} &nbsp;|&nbsp; Best: ${highScore}</p><button id="oBtn2" style="font-size:14px;padding:8px 24px">Play Again</button>`;
+    overlay.style.display = 'flex';
+    document.getElementById('oBtn2').onclick = startGame;
+  }
+
+  function startGame() {
+    overlay.style.display = 'none';
+    initGame();
+    if (gameLoop) clearInterval(gameLoop);
+    running = true;
+    gameLoop = setInterval(step, +speedSel.value);
+  }
+
+  oBtn.onclick = startGame;
+  startBtn.onclick = startGame;
+
+  document.addEventListener('keydown', (e) => {
+    const k = e.key;
+    if (k === 'ArrowUp' || k === 'w' || k === 'W') {
+      if (dir[1] !== 1) nextDir = [0, -1];
+    }
+    if (k === 'ArrowDown' || k === 's' || k === 'S') {
+      if (dir[1] !== -1) nextDir = [0, 1];
+    }
+    if (k === 'ArrowLeft' || k === 'a' || k === 'A') {
+      if (dir[0] !== 1) nextDir = [-1, 0];
+    }
+    if (k === 'ArrowRight' || k === 'd' || k === 'D') {
+      if (dir[0] !== -1) nextDir = [1, 0];
+    }
+    if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(k))
+      e.preventDefault();
+  });
+</script>
