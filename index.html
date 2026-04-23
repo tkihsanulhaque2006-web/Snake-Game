@@ -4,88 +4,175 @@
     margin: 0;
     padding: 0;
   }
+
   body {
     font-family: var(--font-sans);
+    background: linear-gradient(135deg, #0f172a, #1e293b);
+    color: white;
   }
+
   #app {
-    padding: 1rem 0;
+    padding: 1.5rem 0;
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 12px;
+    gap: 18px;
   }
+
+  /* ===== TOP BAR ===== */
   #top-bar {
     display: flex;
-    gap: 16px;
-    align-items: center;
+    gap: 14px;
     flex-wrap: wrap;
     justify-content: center;
   }
+
   .stat {
-    background: var(--color-background-secondary);
-    border-radius: var(--border-radius-md);
-    padding: 6px 16px;
+    background: rgba(255, 255, 255, 0.06);
+    backdrop-filter: blur(8px);
+    border-radius: 12px;
+    padding: 10px 18px;
+    min-width: 90px;
     text-align: center;
-    min-width: 80px;
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25);
   }
+
   .stat-label {
-    font-size: 12px;
-    color: var(--color-text-secondary);
+    font-size: 11px;
+    opacity: 0.7;
+    letter-spacing: 0.5px;
   }
+
   .stat-val {
-    font-size: 20px;
-    font-weight: 500;
-    color: var(--color-text-primary);
+    font-size: 22px;
+    font-weight: 600;
+    margin-top: 2px;
   }
+
+  /* ===== CONTROLS ===== */
   #controls {
     display: flex;
-    gap: 8px;
+    gap: 10px;
     flex-wrap: wrap;
     justify-content: center;
     align-items: center;
   }
+
   select,
   button {
     font-size: 13px;
+    border-radius: 8px;
+    border: none;
+    padding: 6px 12px;
+    background: rgba(255, 255, 255, 0.08);
+    color: white;
+    backdrop-filter: blur(6px);
+    cursor: pointer;
+    transition: all 0.2s ease;
   }
+
+  select:hover,
+  button:hover {
+    background: rgba(255, 255, 255, 0.16);
+  }
+
+  button:active {
+    transform: scale(0.95);
+  }
+
+  /* ===== CANVAS ===== */
   #canvas-wrap {
     position: relative;
   }
+
   canvas {
     display: block;
-    border-radius: var(--border-radius-md);
-    border: 0.5px solid var(--color-border-secondary);
+    border-radius: 14px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
   }
+
+  /* ===== OVERLAY ===== */
   #overlay {
     position: absolute;
     inset: 0;
+    border-radius: 14px;
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
+    gap: 14px;
+
     background: rgba(0, 0, 0, 0.55);
-    border-radius: var(--border-radius-md);
-    gap: 12px;
+    backdrop-filter: blur(10px);
   }
+
   #overlay h2 {
-    font-size: 22px;
-    font-weight: 500;
+    font-size: 26px;
+    font-weight: 600;
     color: #fff;
   }
+
   #overlay p {
     font-size: 14px;
     color: rgba(255, 255, 255, 0.75);
     text-align: center;
-    padding: 0 16px;
+    line-height: 1.5;
   }
+
   #overlay button {
     font-size: 14px;
     padding: 8px 24px;
-  }
-  #msg {
-    font-size: 18px;
-    font-weight: 500;
+    background: #22c55e;
     color: #fff;
+    font-weight: 500;
+  }
+
+  #overlay button:hover {
+    background: #16a34a;
+  }
+
+  /* ===== D-PAD ===== */
+  #dpad {
+    display: grid;
+    grid-template-columns: repeat(3, 48px);
+    grid-template-rows: repeat(3, 48px);
+    gap: 6px;
+  }
+
+  #dpad button {
+    width: 48px;
+    height: 48px;
+    font-size: 18px;
+    border-radius: 10px;
+    background: rgba(255, 255, 255, 0.08);
+    backdrop-filter: blur(6px);
+    transition: all 0.15s ease;
+  }
+
+  #dpad button:hover {
+    background: rgba(255, 255, 255, 0.18);
+  }
+
+  #dpad button:active {
+    transform: scale(0.9);
+  }
+
+  /* ===== RESPONSIVE ===== */
+  @media (max-width: 500px) {
+    canvas {
+      width: 320px;
+      height: 320px;
+    }
+
+    .stat {
+      padding: 8px 12px;
+    }
+
+    #dpad {
+      grid-template-columns: repeat(3, 42px);
+      grid-template-rows: repeat(3, 42px);
+    }
   }
 </style>
 <div id="app">
@@ -133,6 +220,17 @@
       </p>
       <button id="oBtn">Start Game</button>
     </div>
+  </div>
+  <div id="dpad">
+    <div></div>
+    <button id="du">▲</button>
+    <div></div>
+    <button id="dl">◀</button>
+    <div></div>
+    <button id="dr">▶</button>
+    <div></div>
+    <button id="dd">▼</button>
+    <div></div>
   </div>
 </div>
 <script>
@@ -390,4 +488,17 @@
     if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(k))
       e.preventDefault();
   });
+
+  document.getElementById('du').onclick = () => {
+    if (dir[1] !== 1) nextDir = [0, -1];
+  };
+  document.getElementById('dd').onclick = () => {
+    if (dir[1] !== -1) nextDir = [0, 1];
+  };
+  document.getElementById('dl').onclick = () => {
+    if (dir[0] !== 1) nextDir = [-1, 0];
+  };
+  document.getElementById('dr').onclick = () => {
+    if (dir[0] !== -1) nextDir = [1, 0];
+  };
 </script>
